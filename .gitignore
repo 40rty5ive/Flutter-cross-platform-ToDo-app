@@ -30,6 +30,7 @@
 .pub-cache/
 .pub/
 /build/
+/lib/constants_for_identification.dart
 
 # Web related
 lib/generated_plugin_registrant.dart
@@ -46,4 +47,3 @@ app.*.map.json
 /android/app/release
 /android/app/google-services.json
 /android/key.properties
-/lib/constants_for_identification.dart
