@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:firedart/firedart.dart';
+import '../constants_for_identification.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -12,10 +12,27 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   String _userToDo = '';
   List todoList = [];
+  List listID = [];
+
+  set snapshot(snapshot) {}
 
   void initFirebase() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp();
+    FirebaseAuth.initialize(apiKey, VolatileStore());
+    Firestore.initialize(projectId);
+    var auth = FirebaseAuth.instance;
+    await auth.signIn(email, password);
+    var ref = Firestore.instance.collection('test');
+    ref.stream.listen((document) async {
+      var doc = await ref.get();
+      todoList.clear();
+      listID.clear();
+      for (var i = 0; i < doc.length; i++) {
+        listID.add(doc[i].id);
+        setState(() {
+          todoList.add(doc[i].map["item"]);
+        });
+      }
+    });
   }
 
   @override
@@ -33,44 +50,36 @@ class _HomeState extends State<Home> {
         title: const Text('Список справ'),
         centerTitle: true,
       ),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection('items').snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: Text('Список пустий'));
-          }
-          return ListView.builder(
-              itemCount: snapshot.data!.docs.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Dismissible(
-                  key: Key(snapshot.data!.docs[index].id),
-                  child: Card(
-                    child: ListTile(
-                      title: Text(snapshot.data!.docs[index].get('item')),
-                      trailing: IconButton(
-                        icon: const Icon(
-                          Icons.delete_sweep,
-                          color: Colors.grey,
-                        ),
-                        onPressed: () {
-                          FirebaseFirestore.instance
-                              .collection('items')
-                              .doc(snapshot.data!.docs[index].id)
-                              .delete();
-                        },
-                      ),
+      body: ListView.builder(
+          itemCount: todoList.length,
+          itemBuilder: (BuildContext context, int index) {
+            return Dismissible(
+              key: Key(todoList[index]),
+              child: Card(
+                child: ListTile(
+                  title: Text(todoList[index]),
+                  trailing: IconButton(
+                    onPressed: () {
+                      Firestore.instance
+                          .collection('test')
+                          .document(listID[index])
+                          .delete();
+                    },
+                    icon: const Icon(
+                      Icons.delete_sweep,
+                      color: Colors.grey,
                     ),
                   ),
-                  onDismissed: (direction) {
-                    FirebaseFirestore.instance
-                        .collection('items')
-                        .doc(snapshot.data!.docs[index].id)
-                        .delete();
-                  },
-                );
-              });
-        },
-      ),
+                ),
+              ),
+              onDismissed: (direction) {
+                Firestore.instance
+                    .collection('test')
+                    .document(listID[index])
+                    .delete();
+              },
+            );
+          }),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,
         onPressed: () {
@@ -87,11 +96,13 @@ class _HomeState extends State<Home> {
                   actions: [
                     ElevatedButton(
                         onPressed: () {
-                          FirebaseFirestore.instance
-                              .collection('items')
-                              .add({'item': _userToDo});
-
-                          Navigator.of(context).pop();
+                          if (_userToDo != '') {
+                            Firestore.instance
+                                .collection('test')
+                                .add({'item': _userToDo});
+                            Navigator.of(context).pop();
+                          }
+                          _userToDo = '';
                         },
                         child: const Text('Додати'))
                   ],
